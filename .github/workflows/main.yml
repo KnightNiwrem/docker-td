@@ -2,16 +2,13 @@ name: Build tdlib/td
 
 on:
   schedule:
-    - cron: 0 6 * * 4
-  
+    - cron: 17 6 * * 4
 
 jobs:
   build:
-
     runs-on: ubuntu-18.04
-
     steps:
-      - name: Checkout auto-dw repository
+      - name: Checkout docker-td repository
         uses: actions/checkout@v2
       - name: Update and install dependencies
         run: |
