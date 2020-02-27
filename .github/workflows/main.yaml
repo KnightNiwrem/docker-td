@@ -1,0 +1,42 @@
+name: Build tdlib/td
+
+on:
+  schedule:
+    - cron: 0 6 * * 4
+  
+
+jobs:
+  build:
+
+    runs-on: ubuntu-18.04
+
+    steps:
+      - name: Checkout auto-dw repository
+        uses: actions/checkout@v2
+      - name: Update and install dependencies
+        run: |
+          sudo apt-get -y update
+          sudo apt-get install -y apt-transport-https ca-certificates curl git gnupg-agent software-properties-common
+          curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo apt-key add -
+          sudo add-apt-repository "deb [arch=amd64] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable"
+          sudo apt-get -y update
+          sudo apt-get install docker-ce docker-ce-cli containerd.io
+      - name: Build knightniwrem/tdlib docker image
+        run: |
+          docker build --target builder -t knightniwrem/tdlib:latest .
+      - name: Conditionally update knightniwrem/tdlib and knightniwrem/tdlib-compiled
+        env:
+          DOCKER_HUB_ACCESS_TOKEN: ${{ secrets.DOCKER_HUB_ACCESS_TOKEN }}
+        run: |
+          update_image() {
+            docker login -u knightniwrem -p $DOCKER_HUB_ACCESS_TOKEN
+            docker tag knightniwrem/tdlib:latest knightniwrem/tdlib:$TDLIB_VERSION
+            docker push knightniwrem/tdlib:latest
+            docker push knightniwrem/tdlib:$TDLIB_VERSION
+            docker build -t knightniwrem/tdlib-compiled:latest .
+            docker tag knightniwrem/tdlib-compiled:latest knightniwrem/tdlib-compiled:$TDLIB_VERSION
+            docker push knightniwrem/tdlib-compiled:latest
+            docker push knightniwrem/tdlib-compiled:$TDLIB_VERSION
+          }
+          TDLIB_VERSION=$(docker run --entrypoint git knightniwrem/tdlib:latest describe --abbrev=0 --tags | cut -d 'v' -f 2)
+          docker pull knightniwrem/tdlib-compiled:$TDLIB_VERSION || update_image
