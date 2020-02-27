@@ -1,8 +1,8 @@
-name: Build tdlib/td
+name: build
 
 on:
   schedule:
-    - cron: 17 6 * * 4
+    - cron: 20 6 * * 4
 
 jobs:
   build:
