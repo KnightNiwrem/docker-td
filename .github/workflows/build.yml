@@ -39,4 +39,4 @@ jobs:
           GIT_TD_VERSION=$(git describe --abbrev=0 --tags | cut -d 'v' -f 2)
           popd
           rm -rf td
-          [ "$DOCKER_TD_VERSION" == "$GIT_TD_VERSION" ]] || build_and_update_image
+          [[ "$DOCKER_TD_VERSION" == "$GIT_TD_VERSION" ]] || build_and_update_image
