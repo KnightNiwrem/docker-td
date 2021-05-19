@@ -1,0 +1,45 @@
+name: build
+
+on:
+  push:
+    branches: [ master ]
+  schedule:
+    - cron: 20 6 * * 4
+
+jobs:
+  build:
+    runs-on: ubuntu-20.04
+    steps:
+      - name: Checkout docker-td repository
+        uses: actions/checkout@v2
+      - name: Clone tdlib/td repository
+        run: |
+          git clone https://github.com/tdlib/td.git
+      - name: Pull knightniwrem/tdlib docker image
+        run: |
+          docker pull knightniwrem/tdlib
+      - name: Conditionally build and publish images
+        env:
+          DOCKER_HUB_ACCESS_TOKEN: ${{ secrets.DOCKER_HUB_ACCESS_TOKEN }}
+        run: |
+          build_and_update_image() {
+            docker login -u knightniwrem -p $DOCKER_HUB_ACCESS_TOKEN
+            docker build -t knightniwrem/deno .
+            docker tag knightniwrem/deno:latest knightniwrem/deno:$GIT_DENO_VERSION
+            docker push knightniwrem/deno:latest
+            docker push knightniwrem/deno:$GIT_DENO_VERSION
+
+            docker tag knightniwrem/tdlib:latest knightniwrem/tdlib:$TDLIB_VERSION
+            docker push knightniwrem/tdlib:latest
+            docker push knightniwrem/tdlib:$TDLIB_VERSION
+            docker build -t knightniwrem/tdlib-compiled:latest .
+            docker tag knightniwrem/tdlib-compiled:latest knightniwrem/tdlib-compiled:$TDLIB_VERSION
+            docker push knightniwrem/tdlib-compiled:latest
+            docker push knightniwrem/tdlib-compiled:$TDLIB_VERSION
+          }
+          DOCKER_TDLIB_VERSION=$(docker run --entrypoint git knightniwrem/tdlib:latest describe --abbrev=0 --tags | cut -d 'v' -f 2)
+          pushd td
+          GIT_TDLIB_VERSION=$(git describe --abbrev=0 --tags | cut -d 'v' -f 2)
+          popd
+          rm -rf td
+          [ "$DOCKER_TD_VERSION" == "$GIT_TD_VERSION" ]] || build_and_update_image
